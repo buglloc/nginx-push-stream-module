@@ -45,6 +45,7 @@ module NginxConfiguration
       :user_agent => nil,
 
       :authorized_channels_only => 'off',
+      :authorize_key => nil,
       :allowed_origins => nil,
 
       :client_max_body_size => '32k',
@@ -133,6 +134,8 @@ http {
   <%= write_directive("push_stream_padding_by_user_agent", padding_by_user_agent) %>
 
   <%= write_directive("push_stream_authorized_channels_only", authorized_channels_only, "subscriber may create channels on demand or only authorized (publisher) may do it?") %>
+
+  <%= write_directive("push_stream_authorize_key", authorize_key, "subscriber may create channels if authorized") %>
 
   <%= write_directive("push_stream_shared_memory_size", shared_memory_size) %>
 
