@@ -66,7 +66,7 @@ typedef struct {
     ngx_uint_t                      max_channel_id_length;
     ngx_http_push_stream_template_queue_t  msg_templates;
     ngx_flag_t                      timeout_with_body;
-    ngx_regex_t                    *backtrack_parser_regex;
+    ngx_regex_t                    *channel_parser_regex;
     ngx_http_push_stream_msg_t     *ping_msg;
     ngx_http_push_stream_msg_t     *longpooling_timeout_msg;
     ngx_shm_zone_t                 *shm_zone;
@@ -96,6 +96,7 @@ typedef struct {
     ngx_str_t                       padding_by_user_agent;
     ngx_http_push_stream_padding_t *paddings;
     ngx_http_complex_value_t       *allowed_origins;
+    ngx_str_t                       authorize_key;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -176,6 +177,10 @@ typedef struct {
     ngx_queue_t                     queue; // this MUST be first
     ngx_str_t                      *id;
     ngx_uint_t                      backtrack_messages;
+    ngx_flag_t                      authorized;
+    time_t                          expires;
+    ngx_str_t                      *signed_value;
+    ngx_str_t                      *sign;
 } ngx_http_push_stream_requested_channel_t;
 
 typedef struct {
@@ -269,7 +274,7 @@ static const ngx_str_t NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED = ngx_string("Channe
 #define NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED    (void *) -3
 
 static ngx_str_t        NGX_HTTP_PUSH_STREAM_EMPTY = ngx_string("");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_BACKTRACK_PATTERN = ngx_string("((\\.b([0-9]+))?(/|$))");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PATTERN = ngx_string("((\\.a([0-9]+)\\.([a-z0-9]+))?(\\.b([0-9]+))?(/|$))");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK = ngx_string("callback");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_DATE_FORMAT_ISO_8601 = ngx_string("%4d-%02d-%02dT%02d:%02d:%02d");

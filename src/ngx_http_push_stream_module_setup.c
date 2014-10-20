@@ -231,6 +231,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, allowed_origins),
         NULL },
+    { ngx_string("push_stream_authorize_key"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, authorize_key),
+        NULL },
     ngx_null_command
 };
 
@@ -480,25 +486,25 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
         return NGX_CONF_ERROR;
     }
 
-    ngx_regex_compile_t *backtrack_parser = NULL;
+    ngx_regex_compile_t *channel_parser = NULL;
     u_char               errstr[NGX_MAX_CONF_ERRSTR];
 
-    if ((backtrack_parser = ngx_pcalloc(cf->pool, sizeof(ngx_regex_compile_t))) == NULL) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: push stream module: unable to allocate memory to compile backtrack parser");
+    if ((channel_parser = ngx_pcalloc(cf->pool, sizeof(ngx_regex_compile_t))) == NULL) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: push stream module: unable to allocate memory to compile channel parser");
         return NGX_CONF_ERROR;
     }
 
-    backtrack_parser->pattern = NGX_HTTP_PUSH_STREAM_BACKTRACK_PATTERN;
-    backtrack_parser->pool = cf->pool;
-    backtrack_parser->err.len = NGX_MAX_CONF_ERRSTR;
-    backtrack_parser->err.data = errstr;
+    channel_parser->pattern = NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PATTERN;
+    channel_parser->pool = cf->pool;
+    channel_parser->err.len = NGX_MAX_CONF_ERRSTR;
+    channel_parser->err.data = errstr;
 
-    if (ngx_regex_compile(backtrack_parser) != NGX_OK) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to compile backtrack parser pattern %V", &NGX_HTTP_PUSH_STREAM_BACKTRACK_PATTERN);
+    if (ngx_regex_compile(channel_parser) != NGX_OK) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to compile channel parser pattern %V", &NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PATTERN);
         return NGX_CONF_ERROR;
     }
 
-    conf->backtrack_parser_regex = backtrack_parser->regex;
+    conf->channel_parser_regex = channel_parser->regex;
 
     return NGX_CONF_OK;
 }
@@ -535,6 +541,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->padding_by_user_agent.data = NULL;
     lcf->paddings = NULL;
     lcf->allowed_origins = NULL;
+    lcf->authorize_key.data = NULL;
 
     return lcf;
 }
@@ -582,6 +589,10 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->allowed_origins == NULL) {
         conf->allowed_origins = prev->allowed_origins ;
+    }
+
+    if (conf->authorize_key.data == NULL) {
+        conf->authorize_key = prev->authorize_key;
     }
 
     if (conf->location_type == NGX_CONF_UNSET_UINT) {

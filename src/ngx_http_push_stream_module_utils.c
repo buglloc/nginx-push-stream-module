@@ -1987,7 +1987,7 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
     ngx_str_t                                       vv_channels_path = ngx_null_string;
     ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
     ngx_str_t                                       aux;
-    int                                             captures[15];
+    int                                             captures[24];
     ngx_int_t                                       n;
 
     ngx_http_push_stream_complex_value(r, cf->channels_path, &vv_channels_path);
@@ -2006,7 +2006,7 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
     aux.data = vv_channels_path.data;
     do {
         aux.len = vv_channels_path.len - (aux.data - vv_channels_path.data);
-        if ((n = ngx_regex_exec(mcf->backtrack_parser_regex, &aux, captures, 15)) >= 0) {
+        if ((n = ngx_regex_exec(mcf->channel_parser_regex, &aux, captures, 24)) >= 0) {
             if ((cur = ngx_pcalloc(pool, sizeof(ngx_http_push_stream_requested_channel_t))) == NULL) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for channel_id item");
                 return NULL;
@@ -2018,8 +2018,21 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
             }
             ngx_memcpy(cur->id->data, aux.data, captures[0]);
             cur->backtrack_messages = 0;
-            if (captures[7] > captures[6]) {
-                cur->backtrack_messages = ngx_atoi(aux.data + captures[6], captures[7] - captures[6]);
+            cur->authorized = 0;
+            cur->expires = 0;
+            cur->signed_value = NULL;
+            cur->sign = NULL;
+
+            if (captures[6] != -1) {
+                cur->expires = ngx_atoi(aux.data + captures[6], captures[7] - captures[6]);
+                cur->signed_value = ngx_http_push_stream_create_str(pool, captures[7]);
+                ngx_memcpy(cur->signed_value->data, aux.data, captures[7]);
+                cur->sign = ngx_http_push_stream_create_str(pool, captures[9] - captures[8]);
+                ngx_memcpy(cur->sign->data, aux.data + captures[8], captures[9] - captures[8]);
+            }
+
+            if (captures[13] > captures[12]) {
+                cur->backtrack_messages = ngx_atoi(aux.data + captures[12], captures[13] - captures[12]);
             }
 
             ngx_queue_insert_tail(&channels_ids->queue, &cur->queue);
@@ -2029,4 +2042,43 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
     } while ((n != NGX_REGEX_NO_MATCHED) && (aux.data < (vv_channels_path.data + vv_channels_path.len)));
 
     return channels_ids;
+}
+
+static ngx_flag_t
+ngx_http_push_stream_check_channel_authorize(ngx_http_push_stream_requested_channel_t *channel, ngx_http_request_t *r, ngx_http_push_stream_loc_conf_t *cf)
+{
+    unsigned int                                    md_len;
+    unsigned char                                   md[EVP_MAX_MD_SIZE];
+    ngx_str_t                                      *channel_hash;
+
+    if (channel->authorized)
+        return channel->authorized;
+
+    if (channel->sign == NULL || channel->signed_value == NULL)
+        return 0;
+
+    if (cf->authorize_key.data == NULL)
+        return 0;
+
+
+    HMAC(EVP_sha1(), cf->authorize_key.data, cf->authorize_key.len, channel->signed_value->data, channel->signed_value->len, md, &md_len);
+
+    channel_hash = ngx_http_push_stream_create_str(r->pool, md_len * 2);
+    if (channel_hash == NULL) {
+        return 0;
+    }
+
+    ngx_hex_dump(channel_hash->data, md, md_len);
+
+    if (
+        channel_hash->len == channel->sign->len
+        && (!channel->expires || channel->expires > ngx_time())
+        && ngx_strncmp(channel->sign->data, channel_hash->data, channel_hash->len) == 0
+    ) {
+        channel->authorized = 1;
+    } else {
+        channel->authorized = 0;
+    }
+
+    return channel->authorized;
 }

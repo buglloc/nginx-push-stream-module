@@ -359,8 +359,8 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
 
         channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log, mcf);
 
-        // check if channel exists when authorized_channels_only is on
-        if (cf->authorized_channels_only && !is_wildcard_channel && ((channel == NULL) || (channel->stored_messages == 0))) {
+        // check if channel exists or user have permissions to create it when authorized_channels_only is on
+        if (cf->authorized_channels_only && !is_wildcard_channel && ((channel == NULL) || (channel->stored_messages == 0)) && ((cf->authorize_key.data == NULL) || (ngx_http_push_stream_check_channel_authorize(cur, r, cf) == 0))) {
             *status_code = NGX_HTTP_FORBIDDEN;
             *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_CANNOT_CREATE_CHANNELS;
             return NGX_ERROR;

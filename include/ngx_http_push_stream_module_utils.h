@@ -28,6 +28,8 @@
 
 #include <ngx_http_push_stream_module.h>
 #include <ngx_http_push_stream_module_ipc.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
 
 typedef struct {
     ngx_queue_t           queue;
@@ -295,6 +297,8 @@ uint64_t                    ngx_http_push_stream_htonll(uint64_t value);
 uint64_t                    ngx_http_push_stream_ntohll(uint64_t value);
 
 static ngx_int_t            ngx_http_push_stream_set_expires(ngx_http_request_t *r, ngx_http_push_stream_expires_t expires, time_t expires_time);
+
+static ngx_flag_t  ngx_http_push_stream_check_channel_authorize(ngx_http_push_stream_requested_channel_t *channel, ngx_http_request_t *r, ngx_http_push_stream_loc_conf_t *cf);
 
 ngx_http_push_stream_requested_channel_t *ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_pool_t *pool);
 
