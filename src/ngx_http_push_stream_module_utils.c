@@ -2060,20 +2060,20 @@ ngx_http_push_stream_check_channel_authorize(ngx_http_push_stream_requested_chan
     if (cf->authorize_key.data == NULL)
         return 0;
 
-
     HMAC(EVP_sha1(), cf->authorize_key.data, cf->authorize_key.len, channel->signed_value->data, channel->signed_value->len, md, &md_len);
 
-    channel_hash = ngx_http_push_stream_create_str(r->pool, md_len * 2);
+    channel_hash = ngx_http_push_stream_create_str(r->pool, ngx_base64_decoded_length(channel->sign->len) + 1);
     if (channel_hash == NULL) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for channel_hash string");
         return 0;
     }
 
-    ngx_hex_dump(channel_hash->data, md, md_len);
+    ngx_decode_base64url(channel_hash, channel->sign);
 
     if (
-        channel_hash->len == channel->sign->len
+        channel_hash->len == md_len
         && (!channel->expires || channel->expires > ngx_time())
-        && ngx_strncmp(channel->sign->data, channel_hash->data, channel_hash->len) == 0
+        && ngx_memcmp(channel_hash->data, md, md_len) == 0
     ) {
         channel->authorized = 1;
     } else {

@@ -274,7 +274,7 @@ static const ngx_str_t NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED = ngx_string("Channe
 #define NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED    (void *) -3
 
 static ngx_str_t        NGX_HTTP_PUSH_STREAM_EMPTY = ngx_string("");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PATTERN = ngx_string("((\\.a([0-9]+)\\.([a-z0-9]+))?(\\.b([0-9]+))?(/|$))");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PATTERN = ngx_string("((\\.a([0-9]+)\\.([A-Za-z0-9\\-_]+=*))?(\\.b([0-9]+))?(/|$))");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK = ngx_string("callback");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_DATE_FORMAT_ISO_8601 = ngx_string("%4d-%02d-%02dT%02d:%02d:%02d");

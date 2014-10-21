@@ -1,6 +1,7 @@
 # encoding: ascii
 require 'spec_helper'
 require 'openssl'
+require 'base64'
 
 describe "Create authorized channel" do
   let(:config) do
@@ -90,7 +91,9 @@ describe "Create authorized channel" do
 
   def sign_channel(channel, expires, secret)
       unsigned_value = "#{channel}.a#{expires}"
-      return "#{unsigned_value}.#{OpenSSL::HMAC.hexdigest('sha1', secret, unsigned_value)}"
+      sign = OpenSSL::HMAC.digest('sha1', secret, unsigned_value)
+      sign = Base64.urlsafe_encode64(sign)
+      return "#{unsigned_value}.#{sign}"
     end
 
   def check_created(sub)
